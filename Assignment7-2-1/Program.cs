@@ -1,8 +1,11 @@
 using Assignment7_2_1.Contracts;
 using Assignment7_2_1.Domain;
 using Assignment7_2_1.Service;
+using Assignment7_2_1.Service.Application;
 
-class Program
+namespace Assignment7_2_1;
+
+public static class Program
 {
     static void Main(string[] args)
     {
@@ -13,6 +16,28 @@ class Program
         IParticipationCategoryRepository categoryRepository = new ParticipationCategoryRepository();
         IParticipationRecordRepository recordRepository = new ParticipationRecordRepository();
 
+        List<IParticipationAcceptanceRule> rules = new()
+        {
+            new EligibilityRule(
+                Guid.NewGuid(),
+                "Eligibility validation",
+                "Course Instructor",
+                studentRepository,
+                categoryRepository),
+
+            new FrequencyRule(
+                Guid.NewGuid(),
+                "Frequency validation",
+                "Course Instructor",
+                recordRepository)
+        };
+
+        ParticipationRecordingService participationService = new(
+            studentRepository,
+            categoryRepository,
+            recordRepository,
+            rules);
+        
         Student maya = new(Guid.NewGuid(), "Maya Chen", "maya@example.edu");
         Student jordan = new(Guid.NewGuid(), "Jordan Smith", "jordan@example.edu");
 
@@ -39,22 +64,40 @@ class Program
         categoryRepository.Add(askingQuestions);
         categoryRepository.Add(helpingOthers);
 
-        ParticipationRecord firstRecord = new(
-            Guid.NewGuid(),
-            maya,
-            askingQuestions,
-            DateTime.Now.AddMinutes(-25),
-            "Connected the question to class invariants.");
+        ParticipationAcceptanceResult firstResult =
+            participationService.RecordParticipation(
+                maya.Id,
+                askingQuestions.Id,
+                "Connected the question to class invariants.",
+                DateTime.Now.AddMinutes(-25));
 
-        ParticipationRecord secondRecord = new(
-            Guid.NewGuid(),
-            jordan,
-            helpingOthers,
-            DateTime.Now.AddMinutes(-10));
+        ParticipationAcceptanceResult secondResult =
+            participationService.RecordParticipation(
+                jordan.Id,
+                helpingOthers.Id,
+                null,
+                DateTime.Now.AddMinutes(-10));
 
-        recordRepository.Add(firstRecord);
-        recordRepository.Add(secondRecord);
+        Console.WriteLine($"Maya's record accepted: {firstResult.IsAccepted}");
+        Console.WriteLine($"Jordan's record accepted: {secondResult.IsAccepted}");
+
+        ParticipationRecord firstRecord = recordRepository.GetAll()
+            .Single(record => record.Student.Id == maya.Id && record.Category.Id == askingQuestions.Id);
+        ParticipationRecord secondRecord = recordRepository.GetAll()
+            .Single(record => record.Student.Id == jordan.Id && record.Category.Id == helpingOthers.Id);
+        
         Console.WriteLine($"Created {recordRepository.GetAll().Count} participation records.");
+
+        Console.WriteLine("\nREJECTED DUPLICATE PARTICIPATION");
+        int recordCountBeforeRejection = recordRepository.GetAll().Count;
+        ParticipationAcceptanceResult duplicateResult = participationService.RecordParticipation(
+            maya.Id,
+            askingQuestions.Id,
+            "A duplicate participation attempt.",
+            DateTime.Now.AddMinutes(-20));
+        Console.WriteLine($"Accepted: {duplicateResult.IsAccepted}");
+        Console.WriteLine($"Reason: {duplicateResult.RejectionReason}");
+        Console.WriteLine($"Record count unchanged: {recordCountBeforeRejection == recordRepository.GetAll().Count}");
 
         Console.WriteLine("\nREAD ONE");
         Console.WriteLine(recordRepository.GetById(firstRecord.Id));
