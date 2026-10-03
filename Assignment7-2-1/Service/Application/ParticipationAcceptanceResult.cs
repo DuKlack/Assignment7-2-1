@@ -1,4 +1,4 @@
-namespace Assignment7_2_1.Service.Application;
+namespace Assignment7_2_1.Domain;
 
 /// <summary>Reports whether a proposed participation record passed all rules.</summary>
 public sealed class ParticipationAcceptanceResult
