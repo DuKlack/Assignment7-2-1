@@ -31,7 +31,7 @@ public class ParticipationRepository :
     public void AddRecord(ParticipationRecord record) => 
         _participationRecords.Add(record);
 
-    // IParticipationCorrection
+    // IParticipationModifier
     public ParticipationRecord? FindRecord(Guid recordId) => 
         _participationRecords.Find(r => r.Id == recordId);
 
