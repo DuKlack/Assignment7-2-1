@@ -25,6 +25,7 @@ public class ParticipationRecorder
         _categoryLookup = categoryLookup;
         _history = history;
         _correction = correction;
+        _recordWriter = recordWriter;
 
     }
     public void RecordParticipation(Guid recordId,Guid studentId, Guid categoryId,DateTime time, string notes)
