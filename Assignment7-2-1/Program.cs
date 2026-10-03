@@ -165,5 +165,56 @@ public static class Program
         retrievedStudents.Clear();
         Console.WriteLine($"Repository count after clearing the retrieved list: {studentRepository.GetAll().Count}");
 
+        DemonstrateFixedClockSubstitution();
+
+    }
+
+    /// <summary>Substitutes a fixed clock at the composition root to verify the cooldown boundary.</summary>
+    private static void DemonstrateFixedClockSubstitution()
+    {
+        Console.WriteLine("\nFIXED-CLOCK SUBSTITUTION");
+        IStudentRepository students = new StudentRepository();
+        IParticipationCategoryRepository categories = new ParticipationCategoryRepository();
+        IParticipationRecordRepository records = new ParticipationRecordRepository();
+        IParticipationRecordingData data = new ParticipationDataService(students, categories, records);
+        Student student = new(Guid.NewGuid(), "Fixed-Time Student", "fixed@example.edu");
+        ParticipationCategory category = new(Guid.NewGuid(), "Question", "Ask a relevant question.",
+            ParticipationType.AskQuestion, new PointPolicy(2, "Clarifies course material."));
+        students.Add(student);
+        categories.Add(category);
+        List<IParticipationAcceptanceRule> rules = new()
+        {
+            new ExistingStudentAndCategoryRule(data),
+            new ActiveStudentRule(),
+            new DuplicateParticipationRule(data),
+            new DailyParticipationLimitRule(data)
+        };
+
+        DateTime start = new(2026, 10, 3, 12, 0, 0);
+        DateTime[] times = { start, start.AddMinutes(9).AddSeconds(59), start.AddMinutes(10) };
+        bool[] expectedAcceptance = { true, false, true };
+        for (int index = 0; index < times.Length; index++)
+        {
+            // Only the supplied clock changes; the recorder and rule algorithm stay the same.
+            IClock clock = new FixedClock(times[index]);
+            ParticipationRecorder recorder = new(data, clock, rules);
+            int before = records.GetAll().Count;
+            ParticipationAcceptanceResult result = recorder.RecordParticipation(student.Id, category.Id, null);
+            int after = records.GetAll().Count;
+            Console.WriteLine($"{clock.Now:yyyy-MM-dd HH:mm:ss} | Accepted: {result.IsAccepted} | Records: {after}");
+            if (!result.IsAccepted)
+            {
+                Console.WriteLine($"Reason: {result.RejectionReason}");
+                Console.WriteLine($"Record count unchanged: {before == after}");
+            }
+            if (result.IsAccepted != expectedAcceptance[index] ||
+                after != before + (result.IsAccepted ? 1 : 0) ||
+                (!result.IsAccepted && string.IsNullOrWhiteSpace(result.RejectionReason)) ||
+                (result.IsAccepted && records.GetAll().Last().OccurredAt != clock.Now))
+            {
+                throw new InvalidOperationException("The fixed-clock cooldown scenario did not match the expected result.");
+            }
+        }
+        Console.WriteLine("Fixed-clock verification passed: rejected at 9:59; accepted at exactly 10:00.");
     }
 }
