@@ -1,9 +1,10 @@
-﻿using Assignment7_2_1.Contracts;
+using Assignment7_2_1.Contracts;
 using Assignment7_2_1.Domain;
 
 namespace  Assignment7_2_1.Service.Client;
 
 
+/// <summary>Looks up a student and category and stores a participation record.</summary>
 public class ParticipationRecorder
 {
     private readonly IStudentLookup _studentLookup;
@@ -13,6 +14,7 @@ public class ParticipationRecorder
     private readonly IParticipationRecordWriter _recordWriter; 
 
 
+    /// <summary>Initializes ParticipationRecorder with its required collaborators.</summary>
     public ParticipationRecorder(
         IStudentLookup studentLookup,
         ICategoryLookup categoryLookup,
@@ -28,6 +30,7 @@ public class ParticipationRecorder
         _recordWriter = recordWriter;
 
     }
+    /// <summary>Creates and stores participation after the required validation succeeds.</summary>
     public void RecordParticipation(Guid recordId,Guid studentId, Guid categoryId,DateTime time, string notes)
     {
         var student = _studentLookup.FindStudent(studentId) 

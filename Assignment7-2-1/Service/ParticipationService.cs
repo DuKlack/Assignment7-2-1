@@ -1,10 +1,11 @@
-﻿using Assignment7_2_1.Domain;
+using Assignment7_2_1.Domain;
 using Assignment7_2_1.Service.Client;
 using Assignment7_2_1.Service.Clock;    
 using Assignment7_2_1.Service.Application;
 using Assignment7_2_1.Contracts;
 namespace Assignment7_2_1.Service;
 
+/// <summary>Records participation using injected lookup, writing, rule, and clock dependencies.</summary>
 public class ParticipationService
 {
     private readonly IStudentLookup _students;
@@ -13,6 +14,7 @@ public class ParticipationService
     private readonly IReadOnlyList<IParticipationAcceptanceRule> _rules;
     private readonly IParticipationHistory _history;
     private readonly IClock _clock;
+    /// <summary>Initializes ParticipationService with its required collaborators.</summary>
     public ParticipationService(
         IStudentLookup students,
         ICategoryLookup categories,
@@ -29,6 +31,7 @@ public class ParticipationService
         _clock = clock ?? throw new ArgumentNullException(nameof(clock));
     }
 
+    /// <summary>Creates and stores participation after the required validation succeeds.</summary>
     public ParticipationAcceptanceResult RecordParticipation(Guid studentId,Guid categoryId,string note)
     {
         var student = _students.FindStudent(studentId);

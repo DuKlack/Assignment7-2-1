@@ -3,13 +3,17 @@ using Assignment7_2_1.Domain;
 
 namespace Assignment7_2_1.Service.Application;
 
+/// <summary>Enforces a ten-minute category cooldown and a three-record daily limit.</summary>
 public class FrequencyRule : ParticipationAcceptanceRule
 {
     private readonly IParticipationRecordRepository _recordRepository;
     private readonly TimeSpan _cooldown = TimeSpan.FromMinutes(10);
     private readonly int _dailyLimit = 3;
+    /// <summary>Initializes FrequencyRule with its required collaborators.</summary>
     public FrequencyRule(Guid id, string name, string instructor, IParticipationRecordRepository recordRepository) : base(name, instructor, id) => _recordRepository = recordRepository ?? throw new ArgumentNullException(nameof(recordRepository));
+    /// <summary>Returns the rule type name for display.</summary>
     public override string GetRuleType() => nameof(FrequencyRule);
+    /// <summary>Evaluates the proposed record without storing it and explains any rejection.</summary>
     public override ParticipationAcceptanceResult Evaluate(ParticipationRecord record)
     {
         ArgumentNullException.ThrowIfNull(record);

@@ -3,12 +3,14 @@ using Assignment7_2_1.Domain;
 
 namespace Assignment7_2_1.Service.Application;
 
+/// <summary>Evaluates configured rules before storing a proposed participation record.</summary>
 public class ParticipationRecordingService
 {
     private readonly IStudentRepository _studentRepository;
     private readonly IParticipationCategoryRepository _categoryRepository;
     private readonly IParticipationRecordRepository _recordRepository;
     private readonly List<IParticipationAcceptanceRule> _rules;
+    /// <summary>Initializes ParticipationRecordingService with its required collaborators.</summary>
     public ParticipationRecordingService(IStudentRepository studentRepository, IParticipationCategoryRepository categoryRepository, IParticipationRecordRepository recordRepository, IEnumerable<IParticipationAcceptanceRule> rules)
     {
         _studentRepository = studentRepository ?? throw new ArgumentNullException(nameof(studentRepository));
@@ -17,6 +19,7 @@ public class ParticipationRecordingService
         ArgumentNullException.ThrowIfNull(rules);
         _rules = rules.ToList();
     }
+    /// <summary>Creates and stores participation after the required validation succeeds.</summary>
     public ParticipationAcceptanceResult RecordParticipation(Guid studentId, Guid categoryId, string? notes, DateTime occurredAt)
     {
         Student student;

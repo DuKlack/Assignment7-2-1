@@ -9,14 +9,19 @@ public sealed class ParticipationAcceptanceResult
         RejectionReason = rejectionReason;
     }
 
+    /// <summary>Gets whether participation was accepted.</summary>
     public bool IsAccepted { get; }
+    /// <summary>Gets the rejection explanation, or null for an accepted result.</summary>
     public string? RejectionReason { get; }
 
+    /// <summary>Creates an accepted result with no rejection reason.</summary>
     public static ParticipationAcceptanceResult Accepted()
     {
         return new ParticipationAcceptanceResult(true, null);
     }
 
+    /// <summary>Creates a rejected result with a required nonblank explanation.</summary>
+    /// <exception cref="ArgumentException">The reason is blank.</exception>
     public static ParticipationAcceptanceResult Rejected(string reason)
     {
         if (string.IsNullOrWhiteSpace(reason))
