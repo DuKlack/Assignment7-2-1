@@ -9,18 +9,23 @@ public class ParticipationRecorder
     private readonly IStudentLookup _studentLookup;
     private readonly ICategoryLookup _categoryLookup;
     private readonly IParticipationHistory _history;
-    private readonly IParticipationRecordWriter _writer;
+    private readonly IParticipationModifier _correction;
+    private readonly IParticipationRecordWriter _recordWriter; 
+
 
     public ParticipationRecorder(
         IStudentLookup studentLookup,
         ICategoryLookup categoryLookup,
         IParticipationHistory history,
-        IParticipationRecordWriter writer)
+        IParticipationModifier correction,
+        IParticipationRecordWriter recordWriter
+        )
     {
         _studentLookup = studentLookup;
         _categoryLookup = categoryLookup;
         _history = history;
-        _writer = writer;
+        _correction = correction;
+
     }
     public void RecordParticipation(Guid recordId,Guid studentId, Guid categoryId,DateTime time, string notes)
     {
@@ -31,7 +36,8 @@ public class ParticipationRecorder
                        ?? throw new KeyNotFoundException($"Category {categoryId} not found.");
 
         var record = new ParticipationRecord(recordId ,student, category,time, notes);
-        _writer.AddRecord(record);
+        
+        _recordWriter.AddRecord(record);
     }
 }
     

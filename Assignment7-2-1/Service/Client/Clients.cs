@@ -24,7 +24,7 @@ public interface IParticipationRecordWriter
 }
 
 
-public interface IParticipationCorrection
+public interface IParticipationModifier
 {
     ParticipationRecord? FindRecord(Guid recordId);
     void UpdateNotes(Guid recordId, string updatedNotes);
