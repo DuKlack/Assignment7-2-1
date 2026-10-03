@@ -29,7 +29,7 @@ public class ParticipationService
         _clock = clock ?? throw new ArgumentNullException(nameof(clock));
     }
 
-    public ParticipationAcceptanceResult RecordParticipation(Guid studentId,Guid categoryId,string note, int point)
+    public ParticipationAcceptanceResult RecordParticipation(Guid studentId,Guid categoryId,string note)
     {
         var student = _students.FindStudent(studentId);
         if (student is null)
