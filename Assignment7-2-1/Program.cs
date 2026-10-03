@@ -18,8 +18,12 @@ public static class Program
         IParticipationCategoryRepository categoryRepository = new ParticipationCategoryRepository();
         IParticipationRecordRepository recordRepository = new ParticipationRecordRepository();
 
+        // Composition root: one adapter supplies the three focused client roles.
+        ParticipationDataService dataService = new(studentRepository, categoryRepository, recordRepository);
+        IParticipationRecordingData data = dataService;
+        IParticipationRecordCorrection correction = dataService;
+        IParticipationProgressReader progress = dataService;
         IClock clock = new SystemClock();
-        IParticipationRecordingData data = new ParticipationDataService(studentRepository, categoryRepository, recordRepository);
         List<IParticipationAcceptanceRule> rules = new()
         {
             new ExistingStudentAndCategoryRule(data),
@@ -29,6 +33,8 @@ public static class Program
         };
 
         ParticipationRecorder participationService = new(data, clock, rules);
+        ParticipationModifier correctionTool = new(correction);
+        StudentParticipationDashboard dashboard = new(progress);
         
         Student maya = new(Guid.NewGuid(), "Maya Chen", "maya@example.edu");
         Student jordan = new(Guid.NewGuid(), "Jordan Smith", "jordan@example.edu");
@@ -71,9 +77,9 @@ public static class Program
         Console.WriteLine($"Maya's record accepted: {firstResult.IsAccepted}");
         Console.WriteLine($"Jordan's record accepted: {secondResult.IsAccepted}");
 
-        ParticipationRecord firstRecord = recordRepository.GetAll()
+        ParticipationRecord firstRecord = correctionTool.FindRecords(maya.Id)
             .Single(record => record.Student.Id == maya.Id && record.Category.Id == askingQuestions.Id);
-        ParticipationRecord secondRecord = recordRepository.GetAll()
+        ParticipationRecord secondRecord = correctionTool.FindRecords(jordan.Id)
             .Single(record => record.Student.Id == jordan.Id && record.Category.Id == helpingOthers.Id);
         
         Console.WriteLine($"Created {recordRepository.GetAll().Count} participation records.");
@@ -92,13 +98,13 @@ public static class Program
         Console.WriteLine(recordRepository.GetById(firstRecord.Id));
 
         Console.WriteLine("\nREAD ALL");
-        foreach (ParticipationRecord record in recordRepository.GetAll())
+        foreach (ParticipationRecord record in dashboard.GetRecords(maya.Id).Concat(dashboard.GetRecords(jordan.Id)))
         {
             Console.WriteLine(record);
         }
 
         Console.WriteLine("\nUPDATE");
-        recordRepository.UpdateNotes(secondRecord.Id, "Explained the difference between a class and an object.");
+        correctionTool.UpdateNotes(secondRecord.Id, "Explained the difference between a class and an object.");
         studentRepository.UpdateName(jordan.Id, "Jordan Lee");
         categoryRepository.UpdateDescription(
             helpingOthers.Id,
@@ -106,14 +112,14 @@ public static class Program
         Console.WriteLine(recordRepository.GetById(secondRecord.Id));
 
         Console.WriteLine("\nDELETE");
-        recordRepository.Delete(firstRecord.Id);
-        foreach (ParticipationRecord record in recordRepository.GetAll())
+        correctionTool.DeleteRecord(firstRecord.Id);
+        foreach (ParticipationRecord record in dashboard.GetRecords(maya.Id).Concat(dashboard.GetRecords(jordan.Id)))
         {
             Console.WriteLine(record);
         }
         Console.WriteLine(
             $"Maya's calculated point total after deleting her record: " +
-            $"{recordRepository.GetTotalPointsForStudent(maya.Id)}");
+            $"{dashboard.GetPointTotal(maya.Id)}");
 
         Console.WriteLine("\nREJECTED DOMAIN OPERATION");
         try
@@ -150,7 +156,7 @@ public static class Program
         Console.WriteLine($"Same record points after policy change: {secondRecord.AwardedPoints}");
         Console.WriteLine(
             $"Jordan's calculated total after policy change: " +
-            $"{recordRepository.GetTotalPointsForStudent(jordan.Id)}");
+            $"{dashboard.GetPointTotal(jordan.Id)}");
         helpingOthers.PointPolicy.Points = 0;
         Console.WriteLine($"Policy points after a second direct change: {helpingOthers.PointPolicy.Points}");
 
