@@ -2,6 +2,8 @@ using Assignment7_2_1.Contracts;
 using Assignment7_2_1.Domain;
 using Assignment7_2_1.Service;
 using Assignment7_2_1.Service.Application;
+using Assignment7_2_1.Service.Client;
+using Assignment7_2_1.Service.Clock;
 
 namespace Assignment7_2_1;
 
@@ -16,27 +18,17 @@ public static class Program
         IParticipationCategoryRepository categoryRepository = new ParticipationCategoryRepository();
         IParticipationRecordRepository recordRepository = new ParticipationRecordRepository();
 
+        IClock clock = new SystemClock();
+        IParticipationRecordingData data = new ParticipationDataService(studentRepository, categoryRepository, recordRepository);
         List<IParticipationAcceptanceRule> rules = new()
         {
-            new EligibilityRule(
-                Guid.NewGuid(),
-                "Eligibility validation",
-                "Course Instructor",
-                studentRepository,
-                categoryRepository),
-
-            new FrequencyRule(
-                Guid.NewGuid(),
-                "Frequency validation",
-                "Course Instructor",
-                recordRepository)
+            new ExistingStudentAndCategoryRule(data),
+            new ActiveStudentRule(),
+            new DuplicateParticipationRule(data),
+            new DailyParticipationLimitRule(data)
         };
 
-        ParticipationRecordingService participationService = new(
-            studentRepository,
-            categoryRepository,
-            recordRepository,
-            rules);
+        ParticipationRecorder participationService = new(data, clock, rules);
         
         Student maya = new(Guid.NewGuid(), "Maya Chen", "maya@example.edu");
         Student jordan = new(Guid.NewGuid(), "Jordan Smith", "jordan@example.edu");
@@ -68,15 +60,13 @@ public static class Program
             participationService.RecordParticipation(
                 maya.Id,
                 askingQuestions.Id,
-                "Connected the question to class invariants.",
-                DateTime.Now.AddMinutes(-25));
+                "Connected the question to class invariants.");
 
         ParticipationAcceptanceResult secondResult =
             participationService.RecordParticipation(
                 jordan.Id,
                 helpingOthers.Id,
-                null,
-                DateTime.Now.AddMinutes(-10));
+                null);
 
         Console.WriteLine($"Maya's record accepted: {firstResult.IsAccepted}");
         Console.WriteLine($"Jordan's record accepted: {secondResult.IsAccepted}");
@@ -93,8 +83,7 @@ public static class Program
         ParticipationAcceptanceResult duplicateResult = participationService.RecordParticipation(
             maya.Id,
             askingQuestions.Id,
-            "A duplicate participation attempt.",
-            DateTime.Now.AddMinutes(-20));
+            "A duplicate participation attempt.");
         Console.WriteLine($"Accepted: {duplicateResult.IsAccepted}");
         Console.WriteLine($"Reason: {duplicateResult.RejectionReason}");
         Console.WriteLine($"Record count unchanged: {recordCountBeforeRejection == recordRepository.GetAll().Count}");
@@ -133,7 +122,9 @@ public static class Program
                 Guid.NewGuid(),
                 maya,
                 askingQuestions,
-                DateTime.Now.AddDays(1));
+                clock.Now.AddDays(1),
+                null,
+                clock.Now);
         }
         catch (ArgumentOutOfRangeException exception)
         {

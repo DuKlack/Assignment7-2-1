@@ -1,47 +1,40 @@
-using Assignment7_2_1.Contracts;
 using Assignment7_2_1.Domain;
+using Assignment7_2_1.Contracts;
+using Assignment7_2_1.Service.Client;
+using Assignment7_2_1.Service.Clock;
+namespace Assignment7_2_1.Service.Client;
 
-namespace  Assignment7_2_1.Service.Client;
-
-
-/// <summary>Looks up a student and category and stores a participation record.</summary>
+/// <summary>Records participation only after all configured acceptance rules succeed.</summary>
 public class ParticipationRecorder
 {
-    private readonly IStudentLookup _studentLookup;
-    private readonly ICategoryLookup _categoryLookup;
-    private readonly IParticipationHistory _history;
-    private readonly IParticipationModifier _correction;
-    private readonly IParticipationRecordWriter _recordWriter; 
-
-
-    /// <summary>Initializes ParticipationRecorder with its required collaborators.</summary>
-    public ParticipationRecorder(
-        IStudentLookup studentLookup,
-        ICategoryLookup categoryLookup,
-        IParticipationHistory history,
-        IParticipationModifier correction,
-        IParticipationRecordWriter recordWriter
-        )
+    private readonly IParticipationRecordingData _data;
+    private readonly IClock _clock;
+    private readonly IReadOnlyList<IParticipationAcceptanceRule> _rules;
+    public ParticipationRecorder(IParticipationRecordingData data, IClock clock, IReadOnlyList<IParticipationAcceptanceRule> rules)
     {
-        _studentLookup = studentLookup;
-        _categoryLookup = categoryLookup;
-        _history = history;
-        _correction = correction;
-        _recordWriter = recordWriter;
-
+        _data = data ?? throw new ArgumentNullException(nameof(data));
+        _clock = clock ?? throw new ArgumentNullException(nameof(clock));
+        ArgumentNullException.ThrowIfNull(rules);
+        if (rules.Any(rule => rule is null))
+            throw new ArgumentException("Rules cannot contain null entries.", nameof(rules));
+        _rules = rules.ToArray();
     }
-    /// <summary>Creates and stores participation after the required validation succeeds.</summary>
-    public void RecordParticipation(Guid recordId,Guid studentId, Guid categoryId,DateTime time, string notes)
+    public ParticipationAcceptanceResult RecordParticipation(Guid studentId, Guid categoryId, string? notes)
     {
-        var student = _studentLookup.FindStudent(studentId) 
-                      ?? throw new KeyNotFoundException($"Student {studentId} not found.");
-            
-        var category = _categoryLookup.FindCategory(categoryId) 
-                       ?? throw new KeyNotFoundException($"Category {categoryId} not found.");
-
-        var record = new ParticipationRecord(recordId ,student, category,time, notes);
-        
-        _recordWriter.AddRecord(record);
+        Student? student = _data.FindStudents().Find(item => item.Id == studentId);
+        if (student is null) return ParticipationAcceptanceResult.Rejected("The student does not exist.");
+        ParticipationCategory? category = _data.FindCategories().Find(item => item.Id == categoryId);
+        if (category is null) return ParticipationAcceptanceResult.Rejected("The participation category does not exist.");
+        if (notes is not null && notes.Length > 250)
+            return ParticipationAcceptanceResult.Rejected("Participation notes cannot exceed 250 characters.");
+        DateTime now = _clock.Now;
+        ParticipationRecord proposal = new(Guid.NewGuid(), student, category, now, notes, now);
+        foreach (IParticipationAcceptanceRule rule in _rules)
+        {
+            ParticipationAcceptanceResult result = rule.Evaluate(proposal);
+            if (!result.IsAccepted) return result;
+        }
+        _data.StoreAccepted(proposal);
+        return ParticipationAcceptanceResult.Accepted();
     }
 }
-    

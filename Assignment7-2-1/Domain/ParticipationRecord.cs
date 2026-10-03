@@ -17,6 +17,7 @@ public class ParticipationRecord
     /// <param name="category">The category describing the participation.</param>
     /// <param name="occurredAt">The date and time at which participation occurred.</param>
     /// <param name="notes">Optional instructor notes of at most 250 characters.</param>
+    /// <param name="currentTime">The explicit current time used to reject future participation.</param>
     /// <exception cref="ArgumentException">
     /// Thrown when the identifier is empty.
     /// </exception>
@@ -31,7 +32,8 @@ public class ParticipationRecord
         Student student,
         ParticipationCategory category,
         DateTime occurredAt,
-        string? notes = null)
+        string? notes,
+        DateTime currentTime)
     {
         if (id == Guid.Empty)
         {
@@ -41,7 +43,7 @@ public class ParticipationRecord
         ArgumentNullException.ThrowIfNull(student);
         ArgumentNullException.ThrowIfNull(category);
 
-        if (occurredAt > DateTime.Now)
+        if (occurredAt > currentTime)
         {
             throw new ArgumentOutOfRangeException(
                 nameof(occurredAt),

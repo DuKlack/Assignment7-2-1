@@ -1,24 +1,12 @@
-using Assignment7_2_1.Contracts;
 using Assignment7_2_1.Domain;
-
-namespace  Assignment7_2_1.Service.Client;
-
-/// <summary>Delegates record corrections through the correction contract.</summary>
+namespace Assignment7_2_1.Service.Client;
+/// <summary>Finds and corrects existing records through the correction role.</summary>
 public class ParticipationModifier
 {
-    private readonly IParticipationModifier _correction;
-
-    /// <summary>Initializes ParticipationModifier with its required collaborators.</summary>
-    public ParticipationModifier(IParticipationModifier correction)
-    {
-        _correction = correction;
-    }
-    
-
-    /// <summary>Updates the notes of an existing participation record.</summary>
-    public void UpdateNotes(Guid recordId, string updatedNotes) => _correction.UpdateNotes(recordId, updatedNotes);
-
-    /// <summary>Deletes the specified record and reports whether it was removed.</summary>
-    public bool DeleteRecord(Guid recordId) => _correction.DeleteRecord(recordId);
-    
+    private readonly IParticipationRecordCorrection _records;
+    public ParticipationModifier(IParticipationRecordCorrection records) =>
+        _records = records ?? throw new ArgumentNullException(nameof(records));
+    public List<ParticipationRecord> FindRecords(Guid studentId) => _records.FindRecords(studentId);
+    public void UpdateNotes(Guid id, string? notes) => _records.UpdateNotes(id, notes);
+    public void DeleteRecord(Guid id) => _records.Delete(id);
 }
